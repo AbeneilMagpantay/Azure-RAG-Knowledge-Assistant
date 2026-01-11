@@ -28,7 +28,6 @@ class RAGChain:
         model: str = "gpt-4",
         azure_endpoint: Optional[str] = None,
         azure_api_key: Optional[str] = None,
-        azure_api_key: Optional[str] = None,
         azure_deployment: Optional[str] = None,
         azure_api_version: Optional[str] = None,
         openai_api_key: Optional[str] = None,
@@ -45,7 +44,6 @@ class RAGChain:
         self.max_tokens = max_tokens
         
         self.azure_endpoint = azure_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
-        self.azure_api_key = azure_api_key or os.getenv("AZURE_OPENAI_API_KEY")
         self.azure_api_key = azure_api_key or os.getenv("AZURE_OPENAI_API_KEY")
         self.azure_deployment = azure_deployment or os.getenv("AZURE_OPENAI_DEPLOYMENT")
         self.azure_api_version = azure_api_version or os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
