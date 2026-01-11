@@ -41,7 +41,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 @st.cache_resource
-def initialize_rag():
+def initialize_rag(google_api_key=None):
     """Initialize RAG components with caching."""
     try:
         from src.embeddings import EmbeddingGenerator
@@ -49,7 +49,9 @@ def initialize_rag():
         from src.rag import RAGRetriever, RAGChain
         
         # Check for provider preference
-        if os.getenv("GOOGLE_API_KEY"):
+        if google_api_key:
+            provider = "google"
+        elif os.getenv("GOOGLE_API_KEY"):
             provider = "google"
         elif os.getenv("AZURE_OPENAI_ENDPOINT"):
             provider = "azure"
@@ -60,7 +62,7 @@ def initialize_rag():
         
         # Initialize embedding generator
         if provider == "google":
-            embedding_gen = EmbeddingGenerator(provider="google")
+            embedding_gen = EmbeddingGenerator(provider="google", google_api_key=google_api_key)
         elif provider == "azure":
             embedding_gen = EmbeddingGenerator(provider="azure")
         elif provider == "openai":
@@ -80,7 +82,7 @@ def initialize_rag():
         
         # Initialize RAG chain
         if provider == "google":
-            rag_chain = RAGChain(retriever=retriever, llm_provider="google")
+            rag_chain = RAGChain(retriever=retriever, llm_provider="google", google_api_key=google_api_key)
         elif provider == "azure":
             rag_chain = RAGChain(retriever=retriever, llm_provider="azure")
         elif provider == "openai":
@@ -99,17 +101,20 @@ def main():
     
     if "messages" not in st.session_state:
         st.session_state.messages = []
-
-    # Initialize RAG
-    rag_chain, vector_store, embedding_gen, provider = initialize_rag()
-    
-    if not rag_chain:
-        st.warning("Please configure your API keys in .env to continue.")
-        st.stop()
         
     with st.sidebar:
+        st.header("Settings")
+        user_key = st.text_input("Enter Google API Key", type="password", help="Get your key from makersuite.google.com")
+        if not user_key and not os.getenv("GOOGLE_API_KEY"):
+             st.warning("⚠️ Please provide a Google API Key to use Gemini.")
+        
         st.header("Upload Documents")
-        st.info(f"Using Provider: **{provider.upper()}**")
+        
+        # Initialize RAG with user key if provided
+        rag_chain, vector_store, embedding_gen, provider = initialize_rag(google_api_key=user_key if user_key else None)
+        
+        if rag_chain:
+             st.info(f"Using Provider: **{provider.upper()}**")
         
         uploaded_files = st.file_uploader(
             "Upload PDF, TXT, DOCX", 
@@ -118,50 +123,58 @@ def main():
         )
         
         if uploaded_files and st.button("Process Documents"):
-            with st.spinner("Processing documents..."):
-                try:
-                    from src.document_processor import DocumentLoader, DocumentChunker
-                    
-                    total_chunks = 0
-                    for file in uploaded_files:
-                        # Save temporarily
-                        temp_path = Path(f"./temp_{file.name}")
-                        content = file.getvalue()
-                        temp_path.write_bytes(content)
+            if not rag_chain:
+                 st.error("Please provide an API key first.")
+            else:
+                with st.spinner("Processing documents..."):
+                    try:
+                        from src.document_processor import DocumentLoader, DocumentChunker
                         
-                        try:
-                            # Load and chunk
-                            loader = DocumentLoader()
-                            chunker = DocumentChunker()
+                        total_chunks = 0
+                        for file in uploaded_files:
+                            # Save temporarily
+                            temp_path = Path(f"./temp_{file.name}")
+                            content = file.getvalue()
+                            temp_path.write_bytes(content)
                             
-                            docs = loader.load(str(temp_path))
-                            chunks = chunker.chunk(docs)
-                            
-                            # Generate embeddings
-                            texts = [c.content for c in chunks]
-                            embeddings = embedding_gen.embed_batch(texts)
-                            embedding_vectors = [e.embedding for e in embeddings]
-                            
-                            # Add to vector store
-                            vector_store.add_documents(chunks, embedding_vectors)
-                            total_chunks += len(chunks)
-                            
-                        finally:
-                            if temp_path.exists():
-                                temp_path.unlink()
-                    
-                    st.success(f"Successfully processed {total_chunks} chunks from {len(uploaded_files)} files!")
-                    
-                except Exception as e:
-                    st.error(f"Error processing documents: {e}")
+                            try:
+                                # Load and chunk
+                                loader = DocumentLoader()
+                                chunker = DocumentChunker()
+                                
+                                docs = loader.load(str(temp_path))
+                                chunks = chunker.chunk(docs)
+                                
+                                # Generate embeddings
+                                texts = [c.content for c in chunks]
+                                embeddings = embedding_gen.embed_batch(texts)
+                                embedding_vectors = [e.embedding for e in embeddings]
+                                
+                                # Add to vector store
+                                vector_store.add_documents(chunks, embedding_vectors)
+                                total_chunks += len(chunks)
+                                
+                            finally:
+                                if temp_path.exists():
+                                    temp_path.unlink()
+                        
+                        st.success(f"Successfully processed {total_chunks} chunks from {len(uploaded_files)} files!")
+                        
+                    except Exception as e:
+                        st.error(f"Error processing documents: {e}")
         
         if st.button("Clear Knowledge Base"):
-            try:
-                vector_store.delete_index()
-                vector_store.create_index()
-                st.success("Knowledge base cleared!")
-            except Exception as e:
-                st.error(f"Error clearing knowledge base: {e}")
+            if vector_store:
+                try:
+                    vector_store.delete_index()
+                    vector_store.create_index()
+                    st.success("Knowledge base cleared!")
+                except Exception as e:
+                    st.error(f"Error clearing knowledge base: {e}")
+
+    if not rag_chain:
+        st.info("👈 Enter your Google API Key in the sidebar to get started.")
+        st.stop()
 
     # Chat Interface
     for message in st.session_state.messages:
