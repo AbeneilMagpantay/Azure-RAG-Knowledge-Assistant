@@ -61,6 +61,7 @@ def initialize_rag(provider_config):
             embedding_params["azure_endpoint"] = provider_config.get("azure_endpoint")
             embedding_params["azure_api_key"] = provider_config.get("azure_api_key")
             embedding_params["azure_deployment"] = provider_config.get("azure_embedding_deployment")
+            embedding_params["azure_api_version"] = provider_config.get("azure_api_version")
             
         embedding_gen = EmbeddingGenerator(**embedding_params)
         
@@ -84,6 +85,7 @@ def initialize_rag(provider_config):
             rag_params["azure_endpoint"] = provider_config.get("azure_endpoint")
             rag_params["azure_api_key"] = provider_config.get("azure_api_key")
             rag_params["azure_deployment"] = provider_config.get("azure_llm_deployment")
+            rag_params["azure_api_version"] = provider_config.get("azure_api_version")
             
         rag_chain = RAGChain(**rag_params)
             

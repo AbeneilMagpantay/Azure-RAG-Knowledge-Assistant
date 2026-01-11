@@ -28,7 +28,9 @@ class RAGChain:
         model: str = "gpt-4",
         azure_endpoint: Optional[str] = None,
         azure_api_key: Optional[str] = None,
+        azure_api_key: Optional[str] = None,
         azure_deployment: Optional[str] = None,
+        azure_api_version: Optional[str] = None,
         openai_api_key: Optional[str] = None,
         google_api_key: Optional[str] = None,
         ollama_base_url: str = "http://localhost:11434",
@@ -44,7 +46,9 @@ class RAGChain:
         
         self.azure_endpoint = azure_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
         self.azure_api_key = azure_api_key or os.getenv("AZURE_OPENAI_API_KEY")
+        self.azure_api_key = azure_api_key or os.getenv("AZURE_OPENAI_API_KEY")
         self.azure_deployment = azure_deployment or os.getenv("AZURE_OPENAI_DEPLOYMENT")
+        self.azure_api_version = azure_api_version or os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
         self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         self.google_api_key = google_api_key or os.getenv("GOOGLE_API_KEY")
         self.ollama_base_url = ollama_base_url
@@ -62,7 +66,7 @@ class RAGChain:
             self._client = AzureOpenAI(
                 azure_endpoint=self.azure_endpoint,
                 api_key=self.azure_api_key,
-                api_version="2024-02-15-preview"
+                api_version=self.azure_api_version
             )
         elif self.llm_provider == "openai":
             from openai import OpenAI
