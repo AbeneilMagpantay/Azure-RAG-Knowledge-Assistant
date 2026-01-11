@@ -100,8 +100,20 @@ def initialize_rag(provider_config):
 def main():
     st.title("📚 RAG Knowledge Assistant")
     
+    # Initialize chat history store
+    if "chat_store" not in st.session_state:
+        try:
+            from src.storage import ChatHistoryStore
+            st.session_state.chat_store = ChatHistoryStore(session_id="main")
+        except Exception:
+            st.session_state.chat_store = None
+    
+    # Load messages from Supabase or initialize empty
     if "messages" not in st.session_state:
-        st.session_state.messages = []
+        if st.session_state.chat_store and st.session_state.chat_store.is_connected:
+            st.session_state.messages = st.session_state.chat_store.load_history()
+        else:
+            st.session_state.messages = []
         
     with st.sidebar:
         st.header("Settings")
@@ -247,6 +259,8 @@ def main():
 
     if prompt := st.chat_input("Ask a question about your documents..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
+        if st.session_state.chat_store:
+            st.session_state.chat_store.save_message("user", prompt)
         with st.chat_message("user"):
             st.markdown(prompt)
 
@@ -261,6 +275,8 @@ def main():
                 message_placeholder.markdown(full_response)
                 
                 st.session_state.messages.append({"role": "assistant", "content": full_response})
+                if st.session_state.chat_store:
+                    st.session_state.chat_store.save_message("assistant", full_response)
                 
             except Exception as e:
                 st.error(f"Error generating response: {e}")
