@@ -157,7 +157,10 @@ class RAGChain:
         """Generate using Google Gemini."""
         response = self._client.generate_content(
             f"{SYSTEM_PROMPT}\n\n{prompt}",
-            generation_config={"temperature": self.temperature, "max_output_tokens": self.max_tokens}
+            generation_config=genai.types.GenerationConfig(
+                temperature=self.temperature,
+                max_output_tokens=self.max_tokens
+            )
         )
         return response.text, 0
     
@@ -210,7 +213,10 @@ class RAGChain:
         """Stream using Google Gemini."""
         response = self._client.generate_content(
             f"{SYSTEM_PROMPT}\n\n{prompt}",
-            generation_config={"temperature": self.temperature, "max_output_tokens": self.max_tokens},
+            generation_config=genai.types.GenerationConfig(
+                temperature=self.temperature,
+                max_output_tokens=self.max_tokens
+            ),
             stream=True
         )
         for chunk in response:
