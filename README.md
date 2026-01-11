@@ -2,6 +2,8 @@
 
 A document Q&A system that lets you chat with your PDFs and documents using Azure AI services.
 
+![App Screenshot](docs/images/screenshot.png)
+
 ## What It Does
 
 Upload any document (PDF, DOCX, TXT) and ask questions about it. The system finds relevant sections and generates accurate answers with source citations.
