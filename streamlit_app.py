@@ -41,34 +41,27 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 @st.cache_resource
-def initialize_rag(google_api_key=None):
+def initialize_rag(provider_config):
     """Initialize RAG components with caching."""
     try:
         from src.embeddings import EmbeddingGenerator
         from src.vectorstore.local_store import ChromaVectorStore
         from src.rag import RAGRetriever, RAGChain
         
-        # Check for provider preference
-        if google_api_key:
-            provider = "google"
-        elif os.getenv("GOOGLE_API_KEY"):
-            provider = "google"
-        elif os.getenv("AZURE_OPENAI_ENDPOINT"):
-            provider = "azure"
-        elif os.getenv("OPENAI_API_KEY"):
-            provider = "openai"
-        else:
-            provider = "local" # Fallback or Ollama/local
+        provider = provider_config.get("provider", "local")
         
         # Initialize embedding generator
+        embedding_params = {"provider": provider}
         if provider == "google":
-            embedding_gen = EmbeddingGenerator(provider="google", google_api_key=google_api_key)
-        elif provider == "azure":
-            embedding_gen = EmbeddingGenerator(provider="azure")
+            embedding_params["google_api_key"] = provider_config.get("google_api_key")
         elif provider == "openai":
-            embedding_gen = EmbeddingGenerator(provider="openai")
-        else:
-            embedding_gen = EmbeddingGenerator(provider="local")
+            embedding_params["openai_api_key"] = provider_config.get("openai_api_key")
+        elif provider == "azure":
+            embedding_params["azure_endpoint"] = provider_config.get("azure_endpoint")
+            embedding_params["azure_api_key"] = provider_config.get("azure_api_key")
+            embedding_params["azure_deployment"] = provider_config.get("azure_embedding_deployment")
+            
+        embedding_gen = EmbeddingGenerator(**embedding_params)
         
         # Initialize vector store
         vector_store = ChromaVectorStore()
@@ -81,20 +74,23 @@ def initialize_rag(google_api_key=None):
         )
         
         # Initialize RAG chain
+        rag_params = {"retriever": retriever, "llm_provider": provider}
         if provider == "google":
-            rag_chain = RAGChain(retriever=retriever, llm_provider="google", google_api_key=google_api_key)
-        elif provider == "azure":
-            rag_chain = RAGChain(retriever=retriever, llm_provider="azure")
+            rag_params["google_api_key"] = provider_config.get("google_api_key")
         elif provider == "openai":
-            rag_chain = RAGChain(retriever=retriever, llm_provider="openai")
-        else:
-            rag_chain = RAGChain(retriever=retriever, llm_provider="ollama")
+            rag_params["openai_api_key"] = provider_config.get("openai_api_key")
+        elif provider == "azure":
+            rag_params["azure_endpoint"] = provider_config.get("azure_endpoint")
+            rag_params["azure_api_key"] = provider_config.get("azure_api_key")
+            rag_params["azure_deployment"] = provider_config.get("azure_llm_deployment")
             
-        return rag_chain, vector_store, embedding_gen, provider
+        rag_chain = RAGChain(**rag_params)
+            
+        return rag_chain, vector_store, embedding_gen
         
     except Exception as e:
         st.error(f"Failed to initialize RAG: {e}")
-        return None, None, None, None
+        return None, None, None
 
 def main():
     st.title("📚 RAG Knowledge Assistant")
@@ -104,17 +100,64 @@ def main():
         
     with st.sidebar:
         st.header("Settings")
-        user_key = st.text_input("Enter Google API Key", type="password", help="Get your key from makersuite.google.com")
-        if not user_key and not os.getenv("GOOGLE_API_KEY"):
-             st.warning("⚠️ Please provide a Google API Key to use Gemini.")
         
+        # Provider Selection
+        provider = st.selectbox(
+            "Select LLM Provider",
+            ["Google Gemini", "OpenAI", "Azure OpenAI", "Local (Ollama)"],
+            index=0
+        )
+        
+        provider_config = {"provider": "local"}
+        
+        if provider == "Google Gemini":
+            provider_config["provider"] = "google"
+            api_key = st.text_input("Google API Key", type="password")
+            if api_key:
+                provider_config["google_api_key"] = api_key
+            else:
+                 # Fallback to env
+                 provider_config["google_api_key"] = os.getenv("GOOGLE_API_KEY")
+                 
+        elif provider == "OpenAI":
+            provider_config["provider"] = "openai"
+            api_key = st.text_input("OpenAI API Key", type="password")
+            if api_key:
+                provider_config["openai_api_key"] = api_key
+            else:
+                provider_config["openai_api_key"] = os.getenv("OPENAI_API_KEY")
+                
+        elif provider == "Azure OpenAI":
+            provider_config["provider"] = "azure"
+            provider_config["azure_endpoint"] = st.text_input("Azure Endpoint", value=os.getenv("AZURE_OPENAI_ENDPOINT", ""))
+            provider_config["azure_api_key"] = st.text_input("Azure API Key", type="password", value=os.getenv("AZURE_OPENAI_API_KEY", ""))
+            provider_config["azure_llm_deployment"] = st.text_input("LLM Deployment Name", value=os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4"))
+            provider_config["azure_embedding_deployment"] = st.text_input("Embedding Deployment Name", value=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-ada-002"))
+            
+        elif provider == "Local (Ollama)":
+             provider_config["provider"] = "ollama"
+        
+        st.divider()
         st.header("Upload Documents")
         
-        # Initialize RAG with user key if provided
-        rag_chain, vector_store, embedding_gen, provider = initialize_rag(google_api_key=user_key if user_key else None)
-        
-        if rag_chain:
-             st.info(f"Using Provider: **{provider.upper()}**")
+        # Initialize RAG
+        # Only initialize if we have necessary config to avoid errors
+        should_init = True
+        if provider == "Google Gemini" and not provider_config.get("google_api_key"):
+            st.warning("⚠️ Enter Google API Key")
+            should_init = False
+        elif provider == "OpenAI" and not provider_config.get("openai_api_key"):
+            st.warning("⚠️ Enter OpenAI API Key")
+            should_init = False
+        elif provider == "Azure OpenAI" and not (provider_config.get("azure_endpoint") and provider_config.get("azure_api_key")):
+            st.warning("⚠️ Enter Azure details")
+            should_init = False
+            
+        rag_chain = None
+        if should_init:
+            rag_chain, vector_store, embedding_gen = initialize_rag(provider_config)
+            if rag_chain:
+                st.success(f"Connected to {provider}")
         
         uploaded_files = st.file_uploader(
             "Upload PDF, TXT, DOCX", 
@@ -124,7 +167,7 @@ def main():
         
         if uploaded_files and st.button("Process Documents"):
             if not rag_chain:
-                 st.error("Please provide an API key first.")
+                 st.error("Please configure the provider first.")
             else:
                 with st.spinner("Processing documents..."):
                     try:
@@ -173,7 +216,7 @@ def main():
                     st.error(f"Error clearing knowledge base: {e}")
 
     if not rag_chain:
-        st.info("👈 Enter your Google API Key in the sidebar to get started.")
+        st.info("👈 Configure your settings in the sidebar to get started.")
         st.stop()
 
     # Chat Interface
