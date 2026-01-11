@@ -79,9 +79,12 @@ def initialize_rag():
         # Check for provider preference
         use_azure = bool(os.getenv("AZURE_OPENAI_ENDPOINT"))
         use_openai = bool(os.getenv("OPENAI_API_KEY"))
+        use_google = bool(os.getenv("GOOGLE_API_KEY"))
         
         # Initialize embedding generator
-        if use_azure:
+        if use_google:
+            embedding_gen = EmbeddingGenerator(provider="google")
+        elif use_azure:
             embedding_gen = EmbeddingGenerator(provider="azure")
         elif use_openai:
             embedding_gen = EmbeddingGenerator(provider="openai")
@@ -99,7 +102,9 @@ def initialize_rag():
         )
         
         # Initialize RAG chain
-        if use_azure:
+        if use_google:
+            rag_chain = RAGChain(retriever=retriever, llm_provider="google")
+        elif use_azure:
             rag_chain = RAGChain(retriever=retriever, llm_provider="azure")
         elif use_openai:
             rag_chain = RAGChain(retriever=retriever, llm_provider="openai")

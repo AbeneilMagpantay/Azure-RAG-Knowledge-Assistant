@@ -24,6 +24,7 @@ class EmbeddingGenerator:
         "text-embedding-ada-002": 1536,
         "all-MiniLM-L6-v2": 384,
         "all-mpnet-base-v2": 768,
+        "models/embedding-001": 768,
     }
     
     def __init__(
@@ -34,6 +35,7 @@ class EmbeddingGenerator:
         azure_api_key: Optional[str] = None,
         azure_deployment: Optional[str] = None,
         openai_api_key: Optional[str] = None,
+        google_api_key: Optional[str] = None,
         local_model_name: str = "all-MiniLM-L6-v2"
     ):
         self.provider = provider
@@ -42,6 +44,7 @@ class EmbeddingGenerator:
         self.azure_api_key = azure_api_key or os.getenv("AZURE_OPENAI_API_KEY")
         self.azure_deployment = azure_deployment or os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
         self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
+        self.google_api_key = google_api_key or os.getenv("GOOGLE_API_KEY")
         self.local_model_name = local_model_name
         
         self._client = None
@@ -67,6 +70,12 @@ class EmbeddingGenerator:
         elif self.provider == "local":
             from sentence_transformers import SentenceTransformer
             self._local_model = SentenceTransformer(self.local_model_name)
+        elif self.provider == "google":
+            import google.generativeai as genai
+            if not self.google_api_key:
+                raise ValueError("Google API key required")
+            genai.configure(api_key=self.google_api_key)
+            self._client = genai
         else:
             raise ValueError(f"Unknown provider: {self.provider}")
     
@@ -76,6 +85,14 @@ class EmbeddingGenerator:
         if self.provider == "local":
             embedding = self._local_model.encode(text).tolist()
             return EmbeddingResult(embedding=embedding, text=text, model=self.local_model_name)
+        
+        if self.provider == "google":
+            result = self._client.embed_content(
+                model=self.model,
+                content=text,
+                task_type="retrieval_document"
+            )
+            return EmbeddingResult(embedding=result['embedding'], text=text, model=self.model)
         
         model = self.azure_deployment if self.provider == "azure" else self.model
         response = self._client.embeddings.create(input=text, model=model)
@@ -104,6 +121,17 @@ class EmbeddingGenerator:
                 embeddings = self._local_model.encode(batch)
                 for j, embedding in enumerate(embeddings):
                     results.append(EmbeddingResult(embedding=embedding.tolist(), text=batch[j], model=self.local_model_name))
+            elif self.provider == "google":
+                # batch embedding for google
+                result = self._client.embed_content(
+                    model=self.model,
+                    content=batch,
+                    task_type="retrieval_document"
+                )
+                # check if result['embedding'] is list of lists
+                embeddings = result['embedding']
+                for j, emb in enumerate(embeddings):
+                    results.append(EmbeddingResult(embedding=emb, text=batch[j], model=self.model))
             else:
                 model = self.azure_deployment if self.provider == "azure" else self.model
                 response = self._client.embeddings.create(input=batch, model=model)

@@ -30,6 +30,7 @@ class RAGChain:
         azure_api_key: Optional[str] = None,
         azure_deployment: Optional[str] = None,
         openai_api_key: Optional[str] = None,
+        google_api_key: Optional[str] = None,
         ollama_base_url: str = "http://localhost:11434",
         ollama_model: str = "llama3",
         temperature: float = 0.7,
@@ -45,6 +46,7 @@ class RAGChain:
         self.azure_api_key = azure_api_key or os.getenv("AZURE_OPENAI_API_KEY")
         self.azure_deployment = azure_deployment or os.getenv("AZURE_OPENAI_DEPLOYMENT")
         self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
+        self.google_api_key = google_api_key or os.getenv("GOOGLE_API_KEY")
         self.ollama_base_url = ollama_base_url
         self.ollama_model = ollama_model
         
@@ -67,6 +69,12 @@ class RAGChain:
             if not self.openai_api_key:
                 raise ValueError("OpenAI API key required")
             self._client = OpenAI(api_key=self.openai_api_key)
+        elif self.llm_provider == "google":
+            import google.generativeai as genai
+            if not self.google_api_key:
+                raise ValueError("Google API key required")
+            genai.configure(api_key=self.google_api_key)
+            self._client = genai.GenerativeModel(self.model)
     
     def query(self, question: str, top_k: int = 5, filters: Optional[str] = None, use_multi_query: bool = False) -> RAGResponse:
         """Run the complete RAG pipeline."""
@@ -113,6 +121,8 @@ class RAGChain:
         """Generate response using configured LLM."""
         if self.llm_provider in ("azure", "openai"):
             return self._generate_openai(prompt)
+        elif self.llm_provider == "google":
+            return self._generate_google(prompt)
         return self._generate_ollama(prompt)
     
     def _generate_openai(self, prompt: str) -> tuple[str, int]:
@@ -140,11 +150,21 @@ class RAGChain:
         )
         response.raise_for_status()
         return response.json()["response"], 0
+
+    def _generate_google(self, prompt: str) -> tuple[str, int]:
+        """Generate using Google Gemini."""
+        response = self._client.generate_content(
+            f"{SYSTEM_PROMPT}\n\n{prompt}",
+            generation_config={"temperature": self.temperature, "max_output_tokens": self.max_tokens}
+        )
+        return response.text, 0
     
     def _generate_stream(self, prompt: str) -> Generator[str, None, None]:
         """Stream generation."""
         if self.llm_provider in ("azure", "openai"):
             yield from self._stream_openai(prompt)
+        elif self.llm_provider == "google":
+            yield from self._stream_google(prompt)
         else:
             yield from self._stream_ollama(prompt)
     
@@ -183,3 +203,14 @@ class RAGChain:
                 data = json.loads(line)
                 if "response" in data:
                     yield data["response"]
+
+    def _stream_google(self, prompt: str) -> Generator[str, None, None]:
+        """Stream using Google Gemini."""
+        response = self._client.generate_content(
+            f"{SYSTEM_PROMPT}\n\n{prompt}",
+            generation_config={"temperature": self.temperature, "max_output_tokens": self.max_tokens},
+            stream=True
+        )
+        for chunk in response:
+            if chunk.text:
+                yield chunk.text
