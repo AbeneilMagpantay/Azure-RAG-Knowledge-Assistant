@@ -51,7 +51,8 @@ def initialize_rag(provider_config):
         provider = provider_config.get("provider", "local")
         
         # Initialize embedding generator
-        embedding_params = {"provider": provider}
+        embedding_provider = "local" if provider == "ollama" else provider
+        embedding_params = {"provider": embedding_provider}
         if provider == "google":
             embedding_params["google_api_key"] = provider_config.get("google_api_key")
         elif provider == "openai":
