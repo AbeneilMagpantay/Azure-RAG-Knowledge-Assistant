@@ -91,8 +91,7 @@ class EmbeddingGenerator:
         if self.provider == "google":
             result = self._client.embed_content(
                 model=self.model,
-                content=text,
-                task_type="retrieval_document"
+                content=text
             )
             return EmbeddingResult(embedding=result['embedding'], text=text, model=self.model)
         
@@ -127,8 +126,7 @@ class EmbeddingGenerator:
                 # batch embedding for google
                 result = self._client.embed_content(
                     model=self.model,
-                    content=batch,
-                    task_type="retrieval_document"
+                    content=batch
                 )
                 # check if result['embedding'] is list of lists
                 embeddings = result['embedding']
