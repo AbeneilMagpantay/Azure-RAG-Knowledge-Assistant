@@ -1,23 +1,21 @@
 # Azure RAG Knowledge Assistant
 
-A document Q&A system that lets you chat with your PDFs and documents using Azure AI services.
-
-![App Screenshot](docs/images/screenshot.png)
+A production-grade document Q&A system that lets you chat with your PDFs and documents using multiple AI providers.
 
 ## What It Does
 
-Upload any document (PDF, DOCX, TXT) and ask questions about it. The system finds relevant sections and generates accurate answers with source citations.
+Upload any document (PDF, DOCX, TXT, Markdown) and ask questions about it. The system finds relevant sections and generates accurate answers with source citations.
 
-**Built with:**
-- Azure OpenAI for embeddings and text generation
-- Azure AI Search for fast document retrieval
-- Streamlit for the web interface
-- Ollama support for local LLM (optional)
+**Supports Multiple LLM Providers:**
+- 🔷 **Azure OpenAI** (GPT-4, text-embedding-3-large)
+- 🌟 **Google Gemini 2.0** Flash
+- 🟢 **OpenAI** API
+- 🦙 **Ollama** (local LLMs)
 
 ## How It Works
 
 ```
-1. Upload Document → Split into chunks → Generate embeddings → Store in Azure Search
+1. Upload Document → Split into chunks → Generate embeddings → Store in vector DB
 2. Ask Question → Find similar chunks → Send to LLM → Get answer with sources
 ```
 
@@ -26,9 +24,7 @@ Upload any document (PDF, DOCX, TXT) and ask questions about it. The system find
 ### Prerequisites
 
 - Python 3.10+
-- Azure account with:
-  - Azure OpenAI (text-embedding-3-large deployed)
-  - Azure AI Search (Free tier works)
+- API key from one of: Google AI Studio, Azure OpenAI, or OpenAI
 - Ollama installed locally (optional, for local LLM)
 
 ### Setup
@@ -47,73 +43,71 @@ pip install -r requirements.txt
 
 # Configure your credentials
 cp .env.example .env
-# Edit .env with your Azure keys
+# Edit .env with your API keys
 ```
 
 ### Run
 
 ```bash
-streamlit run app/streamlit_app.py
+streamlit run streamlit_app.py
 ```
 
-Open http://localhost:8501, upload a document, and start asking questions.
+Open http://localhost:8501, select your provider, upload a document, and start asking questions.
 
 ## Configuration
 
 Create a `.env` file with your credentials:
 
 ```env
-# Azure OpenAI (for embeddings)
+# Google Gemini (Recommended - Easy setup)
+GOOGLE_API_KEY=your-google-api-key
+
+# Azure OpenAI (Enterprise)
 AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
 AZURE_OPENAI_API_KEY=your-key
+AZURE_OPENAI_DEPLOYMENT=gpt-4
 AZURE_OPENAI_EMBEDDING_DEPLOYMENT=text-embedding-3-large
 
-# Azure AI Search
-AZURE_SEARCH_ENDPOINT=https://your-search.search.windows.net
-AZURE_SEARCH_API_KEY=your-admin-key
-AZURE_SEARCH_INDEX_NAME=rag-knowledge-index
+# OpenAI
+OPENAI_API_KEY=your-openai-key
 
-# LLM (choose one)
+# Ollama (Local)
 OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=llama3
-```
-
-## Project Structure
-
-```
-├── src/
-│   ├── document_processor/   # PDF/DOCX loading and chunking
-│   ├── embeddings/           # Azure OpenAI embedding generation
-│   ├── vectorstore/          # Azure AI Search integration
-│   └── rag/                  # Query pipeline and LLM chain
-├── app/
-│   └── streamlit_app.py      # Web interface
-└── tests/                    # Unit tests
 ```
 
 ## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
-| Embeddings | Azure OpenAI (text-embedding-3-large) |
-| Vector Store | Azure AI Search |
-| LLM | Ollama (llama3) or Azure OpenAI |
+| LLM Providers | Google Gemini, Azure OpenAI, OpenAI, Ollama |
+| Embeddings | text-embedding-004, text-embedding-3-large, sentence-transformers |
+| Vector Store | ChromaDB, Azure AI Search |
 | Framework | LangChain |
 | UI | Streamlit |
+| API | FastAPI |
 
 ## Features
 
-- **Hybrid Search**: Combines vector similarity with keyword matching for better results
-- **Source Citations**: Every answer includes references to the original document sections
-- **Multiple File Types**: Supports PDF, DOCX, and TXT files
-- **Local LLM Option**: Use Ollama for free, local text generation
+- **Multi-Provider Support**: Switch between Google, Azure, OpenAI, or local Ollama
+- **Hybrid Search**: Combines vector similarity with keyword matching
+- **Real-time Streaming**: Token-by-token response streaming
+- **Source Citations**: Every answer includes references to original document sections
+- **Multiple File Types**: Supports PDF, DOCX, TXT, and Markdown
 
-## Future Improvements
+## Project Structure
 
-- [ ] Add conversation memory for follow-up questions
-- [ ] Support more file formats (Excel, PowerPoint)
-- [ ] Add user authentication
-- [ ] Deploy to Azure App Service
+```
+├── src/
+│   ├── document_processor/   # PDF/DOCX loading and chunking
+│   ├── embeddings/           # Multi-provider embedding generation
+│   ├── vectorstore/          # ChromaDB and Azure AI Search
+│   └── rag/                  # Query pipeline and LLM chain
+├── app/
+│   └── api/                  # FastAPI backend
+├── streamlit_app.py          # Main web interface
+└── tests/                    # Unit tests
+```
 
 ## License
 

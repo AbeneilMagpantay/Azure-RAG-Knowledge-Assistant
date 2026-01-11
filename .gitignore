@@ -14,3 +14,6 @@ build/
 data/chroma/
 .DS_Store
 Thumbs.db
+
+# Test scripts
+test_*.py
