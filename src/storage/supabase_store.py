@@ -15,8 +15,14 @@ class ChatHistoryStore:
     
     def _init_client(self):
         """Initialize Supabase client."""
-        supabase_url = os.getenv("SUPABASE_URL")
-        supabase_key = os.getenv("SUPABASE_ANON_KEY")
+        # Try st.secrets first (Streamlit Cloud), then os.getenv (local)
+        try:
+            import streamlit as st
+            supabase_url = st.secrets.get("SUPABASE_URL") or os.getenv("SUPABASE_URL")
+            supabase_key = st.secrets.get("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_ANON_KEY")
+        except Exception:
+            supabase_url = os.getenv("SUPABASE_URL")
+            supabase_key = os.getenv("SUPABASE_ANON_KEY")
         
         if not supabase_url or not supabase_key:
             print("⚠️ Supabase not configured - chat history will not persist")
