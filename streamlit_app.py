@@ -1,5 +1,6 @@
 
 import os
+import uuid
 import streamlit as st
 from dotenv import load_dotenv
 from pathlib import Path
@@ -10,6 +11,13 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 # Load environment variables
 load_dotenv()
+
+# Cookie controller for browser session persistence
+try:
+    from streamlit_cookies_controller import CookieController
+    cookie_controller = CookieController()
+except ImportError:
+    cookie_controller = None
 
 st.set_page_config(
     page_title="RAG Knowledge Assistant",
@@ -100,11 +108,22 @@ def initialize_rag(provider_config):
 def main():
     st.title("📚 RAG Knowledge Assistant")
     
-    # Initialize chat history store
+    # Get or create browser-specific session ID from cookies
+    if "browser_id" not in st.session_state:
+        if cookie_controller:
+            browser_id = cookie_controller.get("rag_browser_id")
+            if not browser_id:
+                browser_id = str(uuid.uuid4())
+                cookie_controller.set("rag_browser_id", browser_id)
+            st.session_state.browser_id = browser_id
+        else:
+            st.session_state.browser_id = "default"
+    
+    # Initialize chat history store with browser-specific session
     if "chat_store" not in st.session_state:
         try:
             from src.storage import ChatHistoryStore
-            st.session_state.chat_store = ChatHistoryStore(session_id="main")
+            st.session_state.chat_store = ChatHistoryStore(session_id=st.session_state.browser_id)
         except Exception:
             st.session_state.chat_store = None
     
