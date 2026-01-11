@@ -2,6 +2,8 @@
 
 A production-grade document Q&A system that lets you chat with your PDFs and documents using multiple AI providers.
 
+![App Screenshot](docs/images/screenshot.png)
+
 ## What It Does
 
 Upload any document (PDF, DOCX, TXT, Markdown) and ask questions about it. The system finds relevant sections and generates accurate answers with source citations.
