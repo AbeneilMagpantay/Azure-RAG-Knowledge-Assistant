@@ -72,11 +72,10 @@ class RAGChain:
                 raise ValueError("OpenAI API key required")
             self._client = OpenAI(api_key=self.openai_api_key)
         elif self.llm_provider == "google":
-            import google.generativeai as genai
+            from google import genai
             if not self.google_api_key:
                 raise ValueError("Google API key required")
-            genai.configure(api_key=self.google_api_key)
-            self._client = genai.GenerativeModel(self.model)
+            self._client = genai.Client(api_key=self.google_api_key)
     
     def query(self, question: str, top_k: int = 5, filters: Optional[str] = None, use_multi_query: bool = False) -> RAGResponse:
         """Run the complete RAG pipeline."""
@@ -155,13 +154,10 @@ class RAGChain:
 
     def _generate_google(self, prompt: str) -> tuple[str, int]:
         """Generate using Google Gemini."""
-        import google.generativeai as genai
-        response = self._client.generate_content(
-            f"{SYSTEM_PROMPT}\n\n{prompt}",
-            generation_config=genai.types.GenerationConfig(
-                temperature=self.temperature,
-                max_output_tokens=self.max_tokens
-            )
+        response = self._client.models.generate_content(
+            model=self.model,
+            contents=f"{SYSTEM_PROMPT}\n\n{prompt}",
+            config={"temperature": self.temperature, "max_output_tokens": self.max_tokens}
         )
         return response.text, 0
     
@@ -212,15 +208,10 @@ class RAGChain:
 
     def _stream_google(self, prompt: str) -> Generator[str, None, None]:
         """Stream using Google Gemini."""
-        import google.generativeai as genai
-        response = self._client.generate_content(
-            f"{SYSTEM_PROMPT}\n\n{prompt}",
-            generation_config=genai.types.GenerationConfig(
-                temperature=self.temperature,
-                max_output_tokens=self.max_tokens
-            ),
-            stream=True
-        )
-        for chunk in response:
+        for chunk in self._client.models.generate_content_stream(
+            model=self.model,
+            contents=f"{SYSTEM_PROMPT}\n\n{prompt}",
+            config={"temperature": self.temperature, "max_output_tokens": self.max_tokens}
+        ):
             if chunk.text:
                 yield chunk.text

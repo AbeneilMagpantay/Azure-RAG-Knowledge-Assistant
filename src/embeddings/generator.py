@@ -74,11 +74,10 @@ class EmbeddingGenerator:
             from sentence_transformers import SentenceTransformer
             self._local_model = SentenceTransformer(self.local_model_name)
         elif self.provider == "google":
-            import google.generativeai as genai
+            from google import genai
             if not self.google_api_key:
                 raise ValueError("Google API key required")
-            genai.configure(api_key=self.google_api_key)
-            self._client = genai
+            self._client = genai.Client(api_key=self.google_api_key)
         else:
             raise ValueError(f"Unknown provider: {self.provider}")
     
@@ -90,11 +89,11 @@ class EmbeddingGenerator:
             return EmbeddingResult(embedding=embedding, text=text, model=self.local_model_name)
         
         if self.provider == "google":
-            result = self._client.embed_content(
+            result = self._client.models.embed_content(
                 model=self.model,
-                content=text
+                contents=text
             )
-            return EmbeddingResult(embedding=result['embedding'], text=text, model=self.model)
+            return EmbeddingResult(embedding=result.embeddings[0].values, text=text, model=self.model)
         
         model = self.azure_deployment if self.provider == "azure" else self.model
         response = self._client.embeddings.create(input=text, model=model)
@@ -125,14 +124,13 @@ class EmbeddingGenerator:
                     results.append(EmbeddingResult(embedding=embedding.tolist(), text=batch[j], model=self.local_model_name))
             elif self.provider == "google":
                 # batch embedding for google
-                result = self._client.embed_content(
+                result = self._client.models.embed_content(
                     model=self.model,
-                    content=batch
+                    contents=batch
                 )
-                # check if result['embedding'] is list of lists
-                embeddings = result['embedding']
-                for j, emb in enumerate(embeddings):
-                    results.append(EmbeddingResult(embedding=emb, text=batch[j], model=self.model))
+                # result.embeddings is list of ContentEmbedding objects
+                for j, emb in enumerate(result.embeddings):
+                    results.append(EmbeddingResult(embedding=emb.values, text=batch[j], model=self.model))
             else:
                 model = self.azure_deployment if self.provider == "azure" else self.model
                 response = self._client.embeddings.create(input=batch, model=model)

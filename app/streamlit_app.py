@@ -29,7 +29,7 @@ def setup_sidebar():
     """Configure sidebar settings and return config dict."""
     st.sidebar.title("Configuration")
     
-    provider = st.sidebar.selectbox("LLM Provider", ["ollama", "azure", "openai"])
+    provider = st.sidebar.selectbox("LLM Provider", ["google", "ollama", "azure", "openai"])
     
     if provider == "azure":
         st.sidebar.text_input("Azure Endpoint", value=os.getenv("AZURE_OPENAI_ENDPOINT", ""), key="azure_endpoint", type="password")
@@ -37,6 +37,9 @@ def setup_sidebar():
         st.sidebar.text_input("Deployment", value=os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4"), key="azure_deployment")
     elif provider == "openai":
         st.sidebar.text_input("OpenAI Key", value=os.getenv("OPENAI_API_KEY", ""), key="openai_key", type="password")
+    elif provider == "google":
+        st.sidebar.text_input("Google API Key", value=os.getenv("GOOGLE_API_KEY", ""), key="google_key", type="password")
+        st.sidebar.selectbox("Model", ["gemini-pro"], key="google_model")
     else:
         st.sidebar.text_input("Ollama URL", value="http://localhost:11434", key="ollama_url")
         st.sidebar.text_input("Ollama Model", value="llama3", key="ollama_model")
@@ -61,11 +64,21 @@ def init_rag_chain(config):
         
         # Use Azure embeddings when Azure Search is enabled
         if config["use_azure_search"]:
-            embedding_gen = EmbeddingGenerator(provider="azure")
+            embedding_provider = "azure" if config["provider"] == "azure" else "local"
+            embedding_gen = EmbeddingGenerator(provider=embedding_provider)
             vector_store = AzureSearchVectorStore(embedding_dimension=3072)
             vector_store.create_index()
         else:
-            embedding_gen = EmbeddingGenerator(provider="local")
+            # Use same provider for embeddings if possible
+            if config["provider"] == "google":
+                embedding_gen = EmbeddingGenerator(provider="google", model="models/embedding-001", google_api_key=st.session_state.get("google_key"))
+            elif config["provider"] == "azure":
+                embedding_gen = EmbeddingGenerator(provider="azure")
+            elif config["provider"] == "openai":
+                embedding_gen = EmbeddingGenerator(provider="openai") 
+            else:
+                 embedding_gen = EmbeddingGenerator(provider="local")
+            
             vector_store = ChromaVectorStore()
             vector_store.create_index()
         
@@ -87,6 +100,9 @@ def init_rag_chain(config):
             })
         elif config["provider"] == "openai":
             llm_config["openai_api_key"] = st.session_state.get("openai_key")
+        elif config["provider"] == "google":
+            llm_config["google_api_key"] = st.session_state.get("google_key")
+            llm_config["model"] = st.session_state.get("google_model")
         else:
             llm_config.update({
                 "ollama_base_url": st.session_state.get("ollama_url"),
