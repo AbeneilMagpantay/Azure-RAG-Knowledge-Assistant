@@ -80,7 +80,7 @@ def initialize_rag(provider_config):
         rag_params = {"retriever": retriever, "llm_provider": provider}
         if provider == "google":
             rag_params["google_api_key"] = provider_config.get("google_api_key")
-            rag_params["model"] = "gemini-1.5-flash"
+            rag_params["model"] = "gemini-1.5-flash-001"
         elif provider == "openai":
             rag_params["openai_api_key"] = provider_config.get("openai_api_key")
         elif provider == "azure":
