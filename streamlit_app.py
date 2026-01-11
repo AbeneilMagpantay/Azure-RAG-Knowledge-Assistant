@@ -55,6 +55,7 @@ def initialize_rag(provider_config):
         embedding_params = {"provider": embedding_provider}
         if provider == "google":
             embedding_params["google_api_key"] = provider_config.get("google_api_key")
+            embedding_params["model"] = "models/embedding-001"
         elif provider == "openai":
             embedding_params["openai_api_key"] = provider_config.get("openai_api_key")
         elif provider == "azure":
@@ -79,6 +80,7 @@ def initialize_rag(provider_config):
         rag_params = {"retriever": retriever, "llm_provider": provider}
         if provider == "google":
             rag_params["google_api_key"] = provider_config.get("google_api_key")
+            rag_params["model"] = "gemini-pro"
         elif provider == "openai":
             rag_params["openai_api_key"] = provider_config.get("openai_api_key")
         elif provider == "azure":
