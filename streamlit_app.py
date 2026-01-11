@@ -55,7 +55,7 @@ def initialize_rag(provider_config):
         embedding_params = {"provider": embedding_provider}
         if provider == "google":
             embedding_params["google_api_key"] = provider_config.get("google_api_key")
-            embedding_params["model"] = "models/embedding-001"
+            embedding_params["model"] = "models/text-embedding-004"
         elif provider == "openai":
             embedding_params["openai_api_key"] = provider_config.get("openai_api_key")
         elif provider == "azure":

@@ -25,6 +25,7 @@ class EmbeddingGenerator:
         "all-MiniLM-L6-v2": 384,
         "all-mpnet-base-v2": 768,
         "models/embedding-001": 768,
+        "models/text-embedding-004": 768,
     }
     
     def __init__(
