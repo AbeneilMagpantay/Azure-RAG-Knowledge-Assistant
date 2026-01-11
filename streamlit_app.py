@@ -130,10 +130,26 @@ def main():
                 
         elif provider == "Azure OpenAI":
             provider_config["provider"] = "azure"
-            provider_config["azure_endpoint"] = st.text_input("Azure Endpoint", value=os.getenv("AZURE_OPENAI_ENDPOINT", ""))
+            
+            def sanitize_azure_endpoint(url):
+                if not url: return url
+                if "openai.azure.com" in url:
+                    # Extract base: https://name.openai.azure.com/
+                    import re
+                    match = re.search(r'(https://[^/]+\.openai\.azure\.com/)', url)
+                    return match.group(1) if match else url
+                return url
+
+            raw_endpoint = st.text_input("Azure Endpoint", value=os.getenv("AZURE_OPENAI_ENDPOINT", ""))
+            provider_config["azure_endpoint"] = sanitize_azure_endpoint(raw_endpoint)
+            
+            if raw_endpoint and raw_endpoint != provider_config["azure_endpoint"]:
+                st.caption(f"ℹ️ specific endpoint detected, using base: `{provider_config['azure_endpoint']}`")
+                
             provider_config["azure_api_key"] = st.text_input("Azure API Key", type="password", value=os.getenv("AZURE_OPENAI_API_KEY", ""))
             provider_config["azure_llm_deployment"] = st.text_input("LLM Deployment Name", value=os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4"))
             provider_config["azure_embedding_deployment"] = st.text_input("Embedding Deployment Name", value=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-ada-002"))
+            provider_config["azure_api_version"] = st.text_input("API Version", value=os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview"))
             
         elif provider == "Local (Ollama)":
              provider_config["provider"] = "ollama"
