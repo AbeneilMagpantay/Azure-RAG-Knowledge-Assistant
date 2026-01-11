@@ -118,6 +118,12 @@ def main():
     with st.sidebar:
         st.header("Settings")
         
+        # Show Supabase connection status
+        if st.session_state.chat_store and st.session_state.chat_store.is_connected:
+            st.success("💾 Chat history: Connected")
+        else:
+            st.warning("💾 Chat history: Not connected")
+        
         # Provider Selection
         provider = st.selectbox(
             "Select LLM Provider",
