@@ -1,0 +1,22 @@
+[
+    {
+        "question": "What is Azure OpenAI?",
+        "ground_truth": "Azure OpenAI is a cloud service that provides access to OpenAI's language models through Microsoft Azure, offering enterprise-grade security, compliance, and integration."
+    },
+    {
+        "question": "How do I create embeddings with Azure OpenAI?",
+        "ground_truth": "You can create embeddings using the Azure OpenAI embeddings API by calling the embeddings.create() method with your text and specifying the deployment name for your embedding model."
+    },
+    {
+        "question": "What is RAG and how does it work?",
+        "ground_truth": "RAG (Retrieval-Augmented Generation) is a technique that combines document retrieval with language model generation. It works by first retrieving relevant documents from a knowledge base, then using those documents as context for the language model to generate grounded, accurate responses."
+    },
+    {
+        "question": "What is Azure AI Search?",
+        "ground_truth": "Azure AI Search is a cloud search service with built-in AI capabilities for vector search, semantic ranking, and hybrid search combining keyword and vector approaches."
+    },
+    {
+        "question": "How do I evaluate RAG pipeline quality?",
+        "ground_truth": "RAG quality can be evaluated using metrics like faithfulness (is the answer grounded in context), answer relevancy (does it address the question), context precision (are retrieved documents relevant), and context recall (are all relevant documents retrieved)."
+    }
+]
