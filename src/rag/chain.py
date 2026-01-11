@@ -155,6 +155,7 @@ class RAGChain:
 
     def _generate_google(self, prompt: str) -> tuple[str, int]:
         """Generate using Google Gemini."""
+        import google.generativeai as genai
         response = self._client.generate_content(
             f"{SYSTEM_PROMPT}\n\n{prompt}",
             generation_config=genai.types.GenerationConfig(
@@ -211,6 +212,7 @@ class RAGChain:
 
     def _stream_google(self, prompt: str) -> Generator[str, None, None]:
         """Stream using Google Gemini."""
+        import google.generativeai as genai
         response = self._client.generate_content(
             f"{SYSTEM_PROMPT}\n\n{prompt}",
             generation_config=genai.types.GenerationConfig(
