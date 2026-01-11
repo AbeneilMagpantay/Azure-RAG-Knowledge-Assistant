@@ -43,8 +43,7 @@ class EmbeddingGenerator:
         self.azure_endpoint = azure_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
         self.azure_api_key = azure_api_key or os.getenv("AZURE_OPENAI_API_KEY")
         self.azure_deployment = azure_deployment or os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
-        self.azure_api_key = azure_api_key or os.getenv("AZURE_OPENAI_API_KEY")
-        self.azure_deployment = azure_deployment or os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
+
         self.azure_api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
         self.openai_api_key = openai_api_key or os.getenv("OPENAI_API_KEY")
         self.google_api_key = google_api_key or os.getenv("GOOGLE_API_KEY")
