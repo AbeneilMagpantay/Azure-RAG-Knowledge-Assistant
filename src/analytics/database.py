@@ -10,7 +10,8 @@ class DataStore:
     """Load uploaded CSV data into SQLite for SQL queries."""
     
     def __init__(self):
-        self.conn = sqlite3.connect(":memory:")
+        # check_same_thread=False allows SQLite to be used across Streamlit's threads
+        self.conn = sqlite3.connect(":memory:", check_same_thread=False)
         self.tables: Dict[str, pd.DataFrame] = {}
     
     def load_csv(self, file_content: bytes, table_name: str = "data") -> Dict[str, Any]:
