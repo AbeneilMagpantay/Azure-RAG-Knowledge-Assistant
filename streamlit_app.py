@@ -108,15 +108,26 @@ def initialize_rag(provider_config):
 def main():
     st.title("📚 RAG Knowledge Assistant")
     
-    # Use fixed session ID for now (cookies don't persist in Streamlit Cloud)
-    # TODO: Implement proper user authentication for separate sessions
-    SESSION_ID = "global"
+    # Get session ID from URL query params (no login needed)
+    # Users can bookmark their unique URL to keep their session
+    params = st.query_params
+    session_id = params.get("session", None)
+    
+    if not session_id:
+        # Generate new session and add to URL
+        session_id = str(uuid.uuid4())[:8]  # Short readable ID
+        st.query_params["session"] = session_id
+        st.rerun()
+    
+    # Show session info in sidebar
+    st.sidebar.caption(f"📌 Session: `{session_id}` (bookmark this URL)")
     
     # Initialize chat history store
-    if "chat_store" not in st.session_state:
+    if "chat_store" not in st.session_state or st.session_state.get("current_session") != session_id:
         try:
             from src.storage import ChatHistoryStore
-            st.session_state.chat_store = ChatHistoryStore(session_id=SESSION_ID)
+            st.session_state.chat_store = ChatHistoryStore(session_id=session_id)
+            st.session_state.current_session = session_id
         except Exception:
             st.session_state.chat_store = None
     
