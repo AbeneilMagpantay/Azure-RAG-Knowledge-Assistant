@@ -74,8 +74,8 @@ def main():
             - A/B test data: variant (A/B), converted (0/1)
             
             **Download sample datasets from Kaggle:**
-            - [E-Commerce Sales 2024](https://www.kaggle.com/datasets)
-            - [Marketing Campaign Data](https://www.kaggle.com/datasets)
+            - [E-Commerce Sales 2024-2025](https://www.kaggle.com/datasets/thedevastator/analyzing-e-commerce-sales-data-2024-2025)
+            - [Online Retail Dataset](https://www.kaggle.com/datasets/carrie1/ecommerce-data)
             """)
         return
     
