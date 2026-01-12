@@ -41,7 +41,7 @@ class ChatHistoryStore:
         import streamlit as st
         
         if not self._client:
-            st.toast("❌ Supabase client not initialized", icon="⚠️")
+            st.toast("Supabase client not initialized", icon="⚠️")
             return False
         
         try:
@@ -52,7 +52,7 @@ class ChatHistoryStore:
             }).execute()
             return True
         except Exception as e:
-            st.toast(f"❌ Save failed: {str(e)[:50]}", icon="⚠️")
+            st.toast(f"Save failed: {str(e)[:50]}", icon="⚠️")
             return False
     
     def load_history(self) -> List[Dict[str, str]]:
