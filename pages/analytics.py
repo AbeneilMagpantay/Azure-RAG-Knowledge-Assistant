@@ -86,23 +86,26 @@ def main():
         return
     
     # Tabs for different analytics
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "Overview", "Charts", "SQL Query", "A/B Testing", "Metrics"
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "Overview", "AI Chat", "Charts", "SQL Query", "A/B Testing", "Metrics"
     ])
     
     with tab1:
         render_overview(df, data_store)
     
     with tab2:
-        render_charts(df, data_store)
+        render_ai_chat(df, data_store)
     
     with tab3:
-        render_sql_query(data_store)
+        render_charts(df, data_store)
     
     with tab4:
-        render_ab_testing(df)
+        render_sql_query(data_store)
     
     with tab5:
+        render_ab_testing(df)
+    
+    with tab6:
         render_metrics(df)
 
 
@@ -365,5 +368,112 @@ def render_metrics(df: pd.DataFrame):
             st.metric("Revenue", f"${roi_result['revenue']:,.2f}")
 
 
+def render_ai_chat(df: pd.DataFrame, data_store: DataStore):
+    """Render AI chat for natural language data analysis."""
+    st.subheader("AI Data Assistant")
+    st.caption("Ask questions about your data in plain English")
+    
+    # Check for API key
+    api_key = None
+    try:
+        api_key = st.secrets.get("GOOGLE_API_KEY") or st.session_state.get("google_api_key")
+    except:
+        pass
+    
+    if not api_key:
+        st.warning("Enter your Google API Key in the main app's sidebar to use AI features")
+        api_key = st.text_input("Or enter Google API Key here:", type="password")
+        if api_key:
+            st.session_state.google_api_key = api_key
+    
+    if not api_key:
+        return
+    
+    # Create data summary for context
+    data_summary = f"""
+    Dataset Overview:
+    - Rows: {len(df)}
+    - Columns: {', '.join(df.columns.tolist())}
+    - Numeric columns: {', '.join(df.select_dtypes(include=['number']).columns.tolist())}
+    
+    Sample data (first 5 rows):
+    {df.head().to_string()}
+    
+    Basic statistics:
+    {df.describe().to_string()}
+    """
+    
+    # Chat interface
+    if "analytics_messages" not in st.session_state:
+        st.session_state.analytics_messages = []
+    
+    # Display chat history
+    for msg in st.session_state.analytics_messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+    
+    # Chat input
+    if prompt := st.chat_input("Ask about your data... (e.g., 'What are the top 5 products by sales?')"):
+        # Add user message
+        st.session_state.analytics_messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        # Generate AI response
+        with st.chat_message("assistant"):
+            with st.spinner("Analyzing..."):
+                try:
+                    from google import genai
+                    
+                    client = genai.Client(api_key=api_key)
+                    
+                    system_prompt = f"""You are a data analyst assistant. Help users understand their data.
+                    
+                    {data_summary}
+                    
+                    When answering:
+                    1. Be concise and clear
+                    2. Use simple language non-technical people can understand
+                    3. If relevant, suggest what SQL query could answer their question
+                    4. Highlight key insights and what they mean for the business
+                    5. If you can calculate something from the data summary, do it
+                    """
+                    
+                    response = client.models.generate_content(
+                        model="gemini-2.0-flash-exp",
+                        contents=f"{system_prompt}\n\nUser question: {prompt}"
+                    )
+                    
+                    answer = response.text
+                    st.markdown(answer)
+                    st.session_state.analytics_messages.append({"role": "assistant", "content": answer})
+                    
+                except Exception as e:
+                    error_msg = f"Error: {str(e)}"
+                    st.error(error_msg)
+                    st.session_state.analytics_messages.append({"role": "assistant", "content": error_msg})
+    
+    # Quick analysis buttons
+    st.divider()
+    st.markdown("**Quick Insights:**")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("Summarize this data"):
+            st.session_state.analytics_messages.append({"role": "user", "content": "Give me a brief summary of this dataset and what it tells us."})
+            st.rerun()
+    
+    with col2:
+        if st.button("Find key trends"):
+            st.session_state.analytics_messages.append({"role": "user", "content": "What are the key trends or patterns in this data?"})
+            st.rerun()
+    
+    with col3:
+        if st.button("Suggest actions"):
+            st.session_state.analytics_messages.append({"role": "user", "content": "Based on this data, what business actions would you recommend?"})
+            st.rerun()
+
+
 if __name__ == "__main__":
     main()
+
