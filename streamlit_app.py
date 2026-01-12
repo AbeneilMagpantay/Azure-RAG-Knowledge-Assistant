@@ -106,7 +106,7 @@ def initialize_rag(provider_config):
         return None, None, None
 
 def main():
-    st.title("📚 RAG Knowledge Assistant")
+    st.title("RAG Knowledge Assistant")
     
     # Get session ID from URL query params (no login needed)
     # Users can bookmark their unique URL to keep their session
@@ -120,7 +120,7 @@ def main():
         st.rerun()
     
     # Show session info in sidebar
-    st.sidebar.caption(f"📌 Session: `{session_id}` (bookmark this URL)")
+    st.sidebar.caption(f"Session: `{session_id}` — bookmark this URL to save your history")
     
     # Initialize chat history store
     if "chat_store" not in st.session_state or st.session_state.get("current_session") != session_id:
@@ -141,11 +141,10 @@ def main():
     with st.sidebar:
         st.header("Settings")
         
-        # Show Supabase connection status
         if st.session_state.chat_store and st.session_state.chat_store.is_connected:
-            st.success("💾 Chat history: Connected")
+            st.success("Chat history: Connected")
         else:
-            st.warning("💾 Chat history: Not connected")
+            st.warning("Chat history: Not connected")
         
         # Provider Selection
         provider = st.selectbox(
