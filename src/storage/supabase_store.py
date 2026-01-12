@@ -38,18 +38,21 @@ class ChatHistoryStore:
     
     def save_message(self, role: str, content: str) -> bool:
         """Save a chat message."""
+        import streamlit as st
+        
         if not self._client:
+            st.toast("❌ Supabase client not initialized", icon="⚠️")
             return False
         
         try:
-            self._client.table("chat_history").insert({
+            result = self._client.table("chat_history").insert({
                 "session_id": self.session_id,
                 "role": role,
                 "content": content
             }).execute()
             return True
         except Exception as e:
-            print(f"Failed to save message: {e}")
+            st.toast(f"❌ Save failed: {str(e)[:50]}", icon="⚠️")
             return False
     
     def load_history(self) -> List[Dict[str, str]]:
