@@ -108,22 +108,15 @@ def initialize_rag(provider_config):
 def main():
     st.title("📚 RAG Knowledge Assistant")
     
-    # Get or create browser-specific session ID from cookies
-    if "browser_id" not in st.session_state:
-        if cookie_controller:
-            browser_id = cookie_controller.get("rag_browser_id")
-            if not browser_id:
-                browser_id = str(uuid.uuid4())
-                cookie_controller.set("rag_browser_id", browser_id)
-            st.session_state.browser_id = browser_id
-        else:
-            st.session_state.browser_id = "default"
+    # Use fixed session ID for now (cookies don't persist in Streamlit Cloud)
+    # TODO: Implement proper user authentication for separate sessions
+    SESSION_ID = "global"
     
-    # Initialize chat history store with browser-specific session
+    # Initialize chat history store
     if "chat_store" not in st.session_state:
         try:
             from src.storage import ChatHistoryStore
-            st.session_state.chat_store = ChatHistoryStore(session_id=st.session_state.browser_id)
+            st.session_state.chat_store = ChatHistoryStore(session_id=SESSION_ID)
         except Exception:
             st.session_state.chat_store = None
     
