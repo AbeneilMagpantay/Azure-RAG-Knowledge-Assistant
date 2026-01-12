@@ -154,12 +154,15 @@ def main():
         
         if provider == "Google Gemini":
             provider_config["provider"] = "google"
-            api_key = st.text_input("Google API Key", type="password")
-            if api_key:
-                provider_config["google_api_key"] = api_key
-            else:
-                 # Fallback to env
-                 provider_config["google_api_key"] = os.getenv("GOOGLE_API_KEY")
+            # Try to get key from secrets first
+            default_key = ""
+            try:
+                default_key = st.secrets.get("GOOGLE_API_KEY", "") or os.getenv("GOOGLE_API_KEY", "")
+            except Exception:
+                default_key = os.getenv("GOOGLE_API_KEY", "")
+            
+            api_key = st.text_input("Google API Key", value=default_key, type="password")
+            provider_config["google_api_key"] = api_key or default_key
                  
         elif provider == "OpenAI":
             provider_config["provider"] = "openai"
