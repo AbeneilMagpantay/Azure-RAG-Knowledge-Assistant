@@ -86,26 +86,29 @@ def main():
         return
     
     # Tabs for different analytics
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "Overview", "AI Chat", "Charts", "SQL Query", "A/B Testing", "Metrics"
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "Overview", "Data Quality", "AI Chat", "Charts", "SQL Query", "A/B Testing", "Metrics"
     ])
     
     with tab1:
         render_overview(df, data_store)
     
     with tab2:
-        render_ai_chat(df, data_store)
+        render_data_quality(df, data_store)
     
     with tab3:
-        render_charts(df, data_store)
+        render_ai_chat(df, data_store)
     
     with tab4:
-        render_sql_query(data_store)
+        render_charts(df, data_store)
     
     with tab5:
-        render_ab_testing(df)
+        render_sql_query(data_store)
     
     with tab6:
+        render_ab_testing(df)
+    
+    with tab7:
         render_metrics(df)
 
 
@@ -142,6 +145,143 @@ def render_overview(df: pd.DataFrame, data_store: DataStore):
         st.subheader("Recommended Charts")
         for chart in suggestions["recommended_charts"]:
             st.markdown(f"- **{chart['type'].title()}**: {chart['x']} vs {chart['y']} — {chart['description']}")
+
+
+def render_data_quality(df: pd.DataFrame, data_store: DataStore):
+    """Render data quality tab - shows issues, user decides what to fix."""
+    st.subheader("Data Quality Report")
+    st.caption("Review your data quality. Apply fixes only if you choose to.")
+    
+    # Overall quality score
+    total_cells = df.size
+    missing_cells = df.isnull().sum().sum()
+    quality_score = ((total_cells - missing_cells) / total_cells) * 100
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Quality Score", f"{quality_score:.1f}%")
+    with col2:
+        st.metric("Missing Values", f"{missing_cells:,}")
+    with col3:
+        st.metric("Complete Rows", f"{len(df.dropna()):,} / {len(df):,}")
+    
+    # Column-by-column analysis
+    st.subheader("Column Analysis")
+    
+    quality_data = []
+    for col in df.columns:
+        missing = df[col].isnull().sum()
+        missing_pct = (missing / len(df)) * 100
+        unique = df[col].nunique()
+        dtype = str(df[col].dtype)
+        
+        # Detect issues
+        issues = []
+        if missing > 0:
+            issues.append(f"{missing_pct:.1f}% missing")
+        if unique == 1:
+            issues.append("Only 1 unique value")
+        if unique == len(df) and dtype == 'object':
+            issues.append("All unique (possible ID)")
+        if col.startswith("Unnamed"):
+            issues.append("Missing header")
+        
+        quality_data.append({
+            "Column": col,
+            "Type": dtype,
+            "Missing": f"{missing} ({missing_pct:.1f}%)",
+            "Unique Values": unique,
+            "Issues": ", ".join(issues) if issues else "None"
+        })
+    
+    quality_df = pd.DataFrame(quality_data)
+    
+    # Highlight rows with issues
+    def highlight_issues(row):
+        if row["Issues"] != "None":
+            return ["background-color: #ffcccc"] * len(row)
+        return [""] * len(row)
+    
+    st.dataframe(
+        quality_df.style.apply(highlight_issues, axis=1),
+        use_container_width=True
+    )
+    
+    # Optional fixes section
+    st.divider()
+    st.subheader("Optional Fixes")
+    st.warning("These changes are optional. Only apply if you understand what they do.")
+    
+    # Fix 1: Rename columns
+    with st.expander("Rename Columns (optional)"):
+        st.caption("Fix headers like 'Unnamed: 0' or rename for clarity")
+        
+        cols_to_rename = st.multiselect(
+            "Select columns to rename",
+            df.columns.tolist()
+        )
+        
+        if cols_to_rename:
+            rename_map = {}
+            for col in cols_to_rename:
+                new_name = st.text_input(f"New name for '{col}'", value=col, key=f"rename_{col}")
+                if new_name != col:
+                    rename_map[col] = new_name
+            
+            if rename_map and st.button("Apply Column Renames"):
+                df_renamed = df.rename(columns=rename_map)
+                data_store.load_csv(df_renamed.to_csv(index=False).encode(), "uploaded_data")
+                st.success(f"Renamed {len(rename_map)} column(s)")
+                st.rerun()
+    
+    # Fix 2: Handle missing values
+    with st.expander("Handle Missing Values (optional)"):
+        st.caption("Choose how to handle missing data - only if you want to")
+        
+        cols_with_missing = [col for col in df.columns if df[col].isnull().any()]
+        
+        if not cols_with_missing:
+            st.success("No missing values found!")
+        else:
+            selected_col = st.selectbox("Select column with missing values", cols_with_missing)
+            
+            if selected_col:
+                missing_count = df[selected_col].isnull().sum()
+                st.info(f"'{selected_col}' has {missing_count} missing values")
+                
+                action = st.radio(
+                    "What would you like to do?",
+                    ["Do nothing", "Fill with a value", "Drop rows with missing"],
+                    key=f"action_{selected_col}"
+                )
+                
+                if action == "Fill with a value":
+                    fill_value = st.text_input("Enter fill value")
+                    if fill_value and st.button("Apply Fill"):
+                        df[selected_col] = df[selected_col].fillna(fill_value)
+                        data_store.load_csv(df.to_csv(index=False).encode(), "uploaded_data")
+                        st.success(f"Filled {missing_count} values with '{fill_value}'")
+                        st.rerun()
+                
+                elif action == "Drop rows with missing":
+                    if st.button("Drop Rows"):
+                        df_clean = df.dropna(subset=[selected_col])
+                        data_store.load_csv(df_clean.to_csv(index=False).encode(), "uploaded_data")
+                        st.success(f"Dropped {missing_count} rows")
+                        st.rerun()
+    
+    # Download cleaned data
+    st.divider()
+    st.subheader("Export Data")
+    csv = df.to_csv(index=False)
+    st.download_button(
+        "Download Current Data as CSV",
+        csv,
+        "cleaned_data.csv",
+        "text/csv"
+    )
+
+
 
 
 def render_charts(df: pd.DataFrame, data_store: DataStore):
